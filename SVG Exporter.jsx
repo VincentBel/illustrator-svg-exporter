@@ -29,7 +29,10 @@ var exportFolder,
     sourceDoc,
     itemsToExport,
     exportDoc,
-    svgOptions;
+    svgOptions,
+    artboardBoundBox;
+
+var BOUNDING_BOX_NAME = '__ILSVGEX__BOUNDING_BOX';
 
 try {
   if ( app.documents.length > 0 ) {
@@ -60,15 +63,15 @@ catch(e) {
 function main() {
   var item;
   app.activeDocument = sourceDoc;
+  artboardBoundBox = addBoundBoxToSource(getFirstArtboard(sourceDoc));
   itemsToExport = getNamedItems(sourceDoc);
-
   for ( var i = 0, len = itemsToExport.length; i < len; i++ ) {
 
 
     item = itemsToExport[i];
 
     if ( item.typename === 'Artboard' ) {
-      exportArtboard(item);
+      // exportArtboard(item);
     } else if ( item.typename === 'Layer' ) {
       exportLayer(item);
     } else {
@@ -79,6 +82,23 @@ function main() {
     exportDoc.pageItems.removeAll();
   }
 
+  sourceDoc.pageItems.getByName(BOUNDING_BOX_NAME).remove();
+}
+
+function getFirstArtboard(doc) {
+  if (doc.artboards.length === 0) {
+    alert('no artboard found!');
+  }
+  return doc.artboards[0];
+}
+
+function addBoundBoxToSource(artboard) {
+  var rect = artboard.artboardRect;
+  app.activeDocument = sourceDoc;
+  var bbox = sourceDoc.pathItems.rectangle(rect[1], rect[0], rect[2]-rect[0], rect[1]-rect[3]);
+  bbox.stroked = false;
+  bbox.name = BOUNDING_BOX_NAME;
+  return bbox;
 }
 
 function exportArtboard(artboard) {
@@ -95,7 +115,7 @@ function exportArtboard(artboard) {
 
   bbox = sourceDoc.pathItems.rectangle(rect[1], rect[0], rect[2]-rect[0], rect[1]-rect[3]);
   bbox.stroked = false;
-  bbox.name = '__ILSVGEX__BOUNDING_BOX';
+  bbox.name = BOUNDING_BOX_NAME;
 
   name = artboard.name;
   prettyName = name.slice(0, -4).replace(/[^\w\s]|_/g, " ").replace(/\s+/g, "-").toLowerCase();
@@ -111,11 +131,11 @@ function exportArtboard(artboard) {
   }
 
   app.activeDocument = exportDoc;
-  exportDoc.pageItems.getByName('__ILSVGEX__BOUNDING_BOX').remove();
+  exportDoc.pageItems.getByName(BOUNDING_BOX_NAME).remove();
 
   // Check if artboard is blank, clean up and exit
   if(!exportDoc.pageItems.length) {
-    sourceDoc.pageItems.getByName('__ILSVGEX__BOUNDING_BOX').remove();
+    sourceDoc.pageItems.getByName(BOUNDING_BOX_NAME).remove();
     return;
   }
 
@@ -133,7 +153,7 @@ function exportArtboard(artboard) {
   exportDoc.layers[0].name = prettyName;
   exportSVG( exportDoc, name, bbox.visibleBounds, svgOptions );
 
-  sourceDoc.pageItems.getByName('__ILSVGEX__BOUNDING_BOX').remove();
+  sourceDoc.pageItems.getByName(BOUNDING_BOX_NAME).remove();
 }
 
 function exportLayer(layer) {
@@ -169,7 +189,7 @@ function exportLayer(layer) {
   }
 
   app.activeDocument = exportDoc;
-
+  exportDoc.pageItems.getByName(BOUNDING_BOX_NAME).remove();
   for ( i = 0, len = exportDoc.pageItems.length; i < len; i++) {
 
     item = exportDoc.pageItems[i];
@@ -197,14 +217,15 @@ function exportLayer(layer) {
      * treats it (e.g., -142 in the UI is 142).
      *
      */
-    startX = ( !startX || startX > item.visibleBounds[0] ) ? item.visibleBounds[0] : startX;
-    startY = ( !startY || startY < item.visibleBounds[1] ) ? item.visibleBounds[1] : startY;
-    endX = ( !endX || endX < item.visibleBounds[2] ) ? item.visibleBounds[2] : endX;
-    endY = ( !endY || endY > item.visibleBounds[3] ) ? item.visibleBounds[3] : endY;
+    // startX = ( !startX || startX > item.visibleBounds[0] ) ? item.visibleBounds[0] : startX;
+    // startY = ( !startY || startY < item.visibleBounds[1] ) ? item.visibleBounds[1] : startY;
+    // endX = ( !endX || endX < item.visibleBounds[2] ) ? item.visibleBounds[2] : endX;
+    // endY = ( !endY || endY > item.visibleBounds[3] ) ? item.visibleBounds[3] : endY;
   }
 
   exportDoc.layers[0].name = name.slice(0, -4);
-  exportSVG( exportDoc, name, [startX, startY, endX, endY], svgOptions );
+  // exportSVG( exportDoc, name, [startX, startY, endX, endY], svgOptions );
+  exportSVG( exportDoc, name, artboardBoundBox.visibleBounds, svgOptions );
 }
 
 function exportItem(item) {
